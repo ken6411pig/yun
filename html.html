@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案管理日曆系統</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            @page {
+                /* MODIFIED: Increased margin for more buffer space */
+                size: A4 landscape;
+                margin: 1cm; 
+            }
+
+            body, #root {
+                margin: 0;
+                padding: 0;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .is-printing .no-print {
+                display: none !important;
+            }
+            
+            .is-printing .printable-area {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                /* MODIFIED: Adjusted height to better fit within new margins */
+                height: calc(100vh - 3cm); 
+            }
+
+             .is-printing, .is-printing * {
+                color: #000 !important;
+             }
+
+            .is-printing .text-gray-400 {
+                color: #aaa !important;
+            }
+
+            .is-printing .text-blue-600 {
+                color: #2563EB !important;
+            }
+
+            .is-printing .project-bar-text {
+                font-size: 12pt !important;
+                line-height: 1.1 !important;
+                color: white !important;
+            }
+            
+            .is-printing .opacity-40 { opacity: 0.6 !important; }
+
+            .print-title { display: none; }
+            .is-printing .print-title {
+                display: block;
+                text-align: center;
+                font-size: 16pt;
+                font-weight: bold;
+                margin-bottom: 10px;
+                height: 40px;
+            }
+            
+            .is-printing .calendar-weeks-container {
+                display: flex;
+                flex-direction: column;
+                height: calc(100% - 40px);
+            }
+            .is-printing .calendar-week-row {
+                flex: 1; 
+                display: flex;
+                flex-direction: column;
+            }
+            .is-printing .calendar-week-row > div {
+                flex: 1; 
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const ProjectCalendar = () => {
+            // 所有狀態定義
+            const [currentUser, setCurrentUser] = useState('');
+            const [showUserSetup, setShowUserSetup] = useState(true);
+            const [tempUserName, setTempUserName] = useState('');
+            const [currentDate, setCurrentDate] = useState(new Date(2025, 6, 1));
+            const [viewMode, setViewMode] = useState('month');
+            const [projects, setProjects] = useState([]);
+            const [showAddForm, setShowAddForm] = useState(false);
+            const [selectedProject, setSelectedProject] = useState(null);
+            const [showEditForm, setShowEditForm] = useState(false);
+            const [showTypeManager, setShowTypeManager] = useState(false);
+            const [showExportManager, setShowExportManager] = useState(false);
+            const [allUsers, setAllUsers] = useState([]);
+            const [isPrinting, setIsPrinting] = useState(false);
+            const [showUserInProgressBar, setShowUserInProgressBar] = useState(true);
+            const [projectTypes, setProjectTypes] = useState([
+                { name: '圖說', color: 'bg-red-500' },
+                { name: '報告書', color: 'bg-green-500' },
+                { name: '預算規劃', color: 'bg-blue-500' },
+                { name: '行政維護', color: 'bg-yellow-500' },
+                { name: '報告', color: 'bg-teal-500' },
+            ]);
+            const [newType, setNewType] = useState({ name: '', color: 'bg-blue-500' });
+            const [newProject, setNewProject] = useState({
+                title: '',
+                customTitle: '',
+                type: '',
+                detail: '',
+                startDate: '',
+                endDate: ''
+            });
+
+            const projectOptions = [
+                '2503 北投穀倉二期',
+                '2413 台大心智病房',
+                '2413 台大健檢中心',
+                '2413 台大眼科未來教室',
+                '其他'
+            ];
+
+            const availableColors = [
+                'bg-red-500', 'bg-green-500', 'bg-blue-500', 'bg-yellow-500', 
+                'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
+                'bg-orange-500', 'bg-gray-500', 'bg-cyan-500', 'bg-lime-500'
+            ];
+
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+            useEffect(() => {
+                const users = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('projects_')) {
+                        const userName = key.replace('projects_', '');
+                        users.push(userName);
+                    }
+                }
+                setAllUsers(users);
+            }, []);
+
+            const handleUserSetup = () => {
+                if (!tempUserName.trim()) return;
+                const userName = tempUserName.trim();
+                setCurrentUser(userName);
+                setShowUserSetup(false);
+                
+                const userKey = `projects_${userName}`;
+                const savedData = localStorage.getItem(userKey);
+                if (savedData) {
+                    try {
+                        const parsed = JSON.parse(savedData);
+                        const projectsWithDates = parsed.projects?.map(p => ({
+                            ...p,
+                            startDate: new Date(p.startDate),
+                            endDate: new Date(p.endDate),
+                            detail: p.detail || '',
+                            // 確保每個專案都有 creator 欄位
+                            creator: p.creator || userName
+                        })) || [];
+                        setProjects(projectsWithDates);
+                        setProjectTypes(parsed.projectTypes || projectTypes);
+                    } catch (e) {
+                        console.error('載入資料失敗:', e);
+                    }
+                }
+                
+                if (!allUsers.includes(userName)) {
+                    setAllUsers([...allUsers, userName]);
+                }
+            };
+
+            const saveProjects = (projectList, typeList) => {
+                if (currentUser) {
+                    const userKey = `projects_${currentUser}`;
+                    const data = {
+                        projects: projectList,
+                        projectTypes: typeList || projectTypes
+                    };
+                    localStorage.setItem(userKey, JSON.stringify(data));
+                }
+            };
+            
+            const handlePrint = () => {
+                setIsPrinting(true);
+                setTimeout(() => {
+                    window.print();
+                    setIsPrinting(false);
+                }, 500);
+            };
+
+            const handleAddProject = () => {
+                const projectTitle = newProject.title === '其他' ? newProject.customTitle : newProject.title;
+                if (!projectTitle || !newProject.startDate || !newProject.endDate) return;
+                
+                const typeInfo = projectTypes.find(t => t.name === newProject.type);
+                const project = {
+                    id: Date.now(),
+                    title: projectTitle,
+                    type: newProject.type,
+                    detail: newProject.detail,
+                    startDate: new Date(newProject.startDate),
+                    endDate: new Date(newProject.endDate),
+                    color: typeInfo?.color || 'bg-blue-500',
+                    creator: currentUser // 新增專案時記錄建立者
+                };
+                
+                const newProjects = [...projects, project];
+                setProjects(newProjects);
+                saveProjects(newProjects, projectTypes);
+                
+                setNewProject({
+                    title: '',
+                    customTitle: '',
+                    type: projectTypes.length > 0 ? projectTypes[0].name : '',
+                    detail: '',
+                    startDate: '',
+                    endDate: ''
+                });
+                setShowAddForm(false);
+            };
+
+            const handleAddType = () => {
+                if (newType.name.trim()) {
+                    const type = {
+                        name: newType.name.trim(),
+                        color: newType.color
+                    };
+                    const newTypes = [...projectTypes, type];
+                    setProjectTypes(newTypes);
+                    saveProjects(projects, newTypes);
+                    setNewType({ name: '', color: 'bg-blue-500' });
+                }
+            };
+
+            const handleDeleteType = (typeName) => {
+                const isTypeInUse = projects.some(project => project.type === typeName);
+                if (isTypeInUse) {
+                    alert('無法刪除：仍有專案使用此類型');
+                    return;
+                }
+                const newTypes = projectTypes.filter(type => type.name !== typeName);
+                setProjectTypes(newTypes);
+                saveProjects(projects, newTypes);
+            };
+
+            const exportData = () => {
+                const dataStr = JSON.stringify({
+                    user: currentUser,
+                    projects: projects,
+                    projectTypes: projectTypes,
+                    exportDate: new Date().toISOString()
+                }, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `專案日曆_${currentUser}_${new Date().toLocaleDateString('zh-TW').replace(/\//g, '-')}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            if (imported.projects && imported.projectTypes) {
+                                const projectsWithDates = imported.projects.map(project => ({
+                                    ...project,
+                                    startDate: new Date(project.startDate),
+                                    endDate: new Date(project.endDate),
+                                    detail: project.detail || '',
+                                    // 保留原始建立者資訊，如果沒有則使用匯出檔案的使用者名稱
+                                    creator: project.creator || imported.user || '未知使用者'
+                                }));
+                                
+                                const mergedProjects = [...projects];
+                                const mergedTypes = [...projectTypes];
+                                
+                                imported.projectTypes.forEach(importedType => {
+                                    if (!mergedTypes.find(t => t.name === importedType.name)) {
+                                        mergedTypes.push(importedType);
+                                    }
+                                });
+                                
+                                projectsWithDates.forEach(importedProject => {
+                                    mergedProjects.push({
+                                        ...importedProject,
+                                        id: Date.now() + Math.random()
+                                    });
+                                });
+                                
+                                setProjects(mergedProjects);
+                                setProjectTypes(mergedTypes);
+                                saveProjects(mergedProjects, mergedTypes);
+                                alert(`成功導入 ${projectsWithDates.length} 個專案！`);
+                            } else {
+                                alert('檔案格式不正確！');
+                            }
+                        } catch (error) {
+                            alert('檔案讀取失敗，請確認格式正確！');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+                event.target.value = '';
+            };
+
+            const handleEditProject = (project) => {
+                const isOtherProject = !projectOptions.slice(0, -1).includes(project.title);
+                setSelectedProject({
+                    ...project,
+                    title: isOtherProject ? '其他' : project.title,
+                    customTitle: isOtherProject ? project.title : '',
+                    startDate: project.startDate.toISOString().split('T')[0],
+                    endDate: project.endDate.toISOString().split('T')[0],
+                    detail: project.detail || ''
+                });
+                setShowEditForm(true);
+            };
+
+            const handleUpdateProject = () => {
+                const projectTitle = selectedProject.title === '其他' ? selectedProject.customTitle : selectedProject.title;
+                if (projectTitle && selectedProject.startDate && selectedProject.endDate) {
+                    const typeInfo = projectTypes.find(t => t.name === selectedProject.type);
+                    const updatedProject = {
+                        ...selectedProject,
+                        title: projectTitle,
+                        startDate: new Date(selectedProject.startDate),
+                        endDate: new Date(selectedProject.endDate),
+                        color: typeInfo?.color || 'bg-blue-500'
+                    };
+                    
+                    const newProjects = projects.map(p => p.id === selectedProject.id ? updatedProject : p);
+                    setProjects(newProjects);
+                    saveProjects(newProjects, projectTypes);
+                    setShowEditForm(false);
+                    setSelectedProject(null);
+                }
+            };
+
+            const handleDeleteProject = (projectId) => {
+                const newProjects = projects.filter(p => p.id !== projectId);
+                setProjects(newProjects);
+                saveProjects(newProjects, projectTypes);
+                setShowEditForm(false);
+                setSelectedProject(null);
+            };
+
+            const navigateMonth = (direction) => {
+                const newDate = new Date(currentDate);
+                newDate.setMonth(newDate.getMonth() + direction);
+                setCurrentDate(newDate);
+            };
+
+            const getDaysInMonth = (date) => {
+                const year = date.getFullYear();
+                const month = date.getMonth();
+
+                const firstDayOfMonth = new Date(year, month, 1);
+                const gridStartDate = new Date(firstDayOfMonth);
+                gridStartDate.setDate(gridStartDate.getDate() - firstDayOfMonth.getDay());
+
+                const lastDayOfMonth = new Date(year, month + 1, 0);
+                const gridEndDate = new Date(lastDayOfMonth);
+                gridEndDate.setDate(gridEndDate.getDate() + (6 - lastDayOfMonth.getDay()));
+
+                const days = [];
+                let current = new Date(gridStartDate);
+                while (current <= gridEndDate) {
+                    days.push(new Date(current));
+                    current.setDate(current.getDate() + 1);
+                }
+                
+                return days;
+            };
+
+            const calculateProjectSegments = (project, week) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const projectStart = new Date(project.startDate);
+                const projectEnd = new Date(project.endDate);
+                const weekStart = new Date(week[0]);
+                const weekEnd = new Date(week[6]);
+
+                if (projectEnd < weekStart || projectStart > weekEnd) {
+                    return null;
+                }
+
+                let startDay = 0;
+                let endDay = 6;
+
+                for (let i = 0; i < 7; i++) {
+                    const dayDate = new Date(week[i]);
+                    if (dayDate.toDateString() === projectStart.toDateString()) {
+                        startDay = i;
+                        break;
+                    } else if (projectStart < dayDate) {
+                        startDay = Math.max(0, i - 1);
+                        break;
+                    }
+                }
+
+                for (let i = 6; i >= 0; i--) {
+                    const dayDate = new Date(week[i]);
+                    if (dayDate.toDateString() === projectEnd.toDateString()) {
+                        endDay = i;
+                        break;
+                    } else if (projectEnd > dayDate) {
+                        endDay = Math.min(6, i + 1);
+                        break;
+                    }
+                }
+
+                if (projectStart < weekStart) startDay = 0;
+                if (projectEnd > weekEnd) endDay = 6;
+
+                const isExpired = projectEnd < today;
+                const isOngoing = projectStart <= today && projectEnd >= today;
+
+                if (isExpired) {
+                    return [{
+                        left: `${(startDay) * 14.285714}%`,
+                        width: `${(endDay - startDay + 1) * 14.285714}%`,
+                        startDay,
+                        endDay,
+                        isExpired: true,
+                        isOngoing: false
+                    }];
+                } else if (isOngoing) {
+                    const segments = [];
+                    let todayInWeek = -1;
+                    
+                    for (let i = 0; i < 7; i++) {
+                        const dayDate = new Date(week[i]);
+                        dayDate.setHours(0, 0, 0, 0);
+                        if (dayDate.getTime() === today.getTime()) {
+                            todayInWeek = i;
+                            break;
+                        }
+                    }
+
+                    const todayInThisWeek = today >= weekStart && today <= weekEnd;
+
+                    if (todayInThisWeek && todayInWeek >= 0) {
+                        if (startDay < todayInWeek) {
+                            segments.push({
+                                left: `${(startDay) * 14.285714}%`,
+                                width: `${(todayInWeek - startDay) * 14.285714}%`,
+                                startDay: startDay,
+                                endDay: todayInWeek - 1,
+                                isExpired: true,
+                                isOngoing: false
+                            });
+                        }
+                        
+                        if (todayInWeek <= endDay) {
+                            segments.push({
+                                left: `${(todayInWeek) * 14.285714}%`,
+                                width: `${(endDay - todayInWeek + 1) * 14.285714}%`,
+                                startDay: todayInWeek,
+                                endDay: endDay,
+                                isExpired: false,
+                                isOngoing: true
+                            });
+                        }
+                    } else if (weekEnd < today) {
+                        segments.push({
+                            left: `${(startDay) * 14.285714}%`,
+                            width: `${(endDay - startDay + 1) * 14.285714}%`,
+                            startDay,
+                            endDay,
+                            isExpired: true,
+                            isOngoing: false
+                        });
+                    } else {
+                        segments.push({
+                            left: `${(startDay) * 14.285714}%`,
+                            width: `${(endDay - startDay + 1) * 14.285714}%`,
+                            startDay,
+                            endDay,
+                            isExpired: false,
+                            isOngoing: true
+                        });
+                    }
+                    
+                    return segments;
+                } else {
+                    return [{
+                        left: `${(startDay) * 14.285714}%`,
+                        width: `${(endDay - startDay + 1) * 14.285714}%`,
+                        startDay,
+                        endDay,
+                        isExpired: false,
+                        isOngoing: false
+                    }];
+                }
+            };
+
+            if (showUserSetup) {
+                return (
+                    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div className="bg-white p-8 rounded-lg shadow-lg w-96">
+                            <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
+                                專案管理日曆系統
+                            </h1>
+                            <p className="text-gray-600 text-center mb-6">
+                                請輸入您的姓名以開始使用
+                            </p>
+                            
+                            <div className="space-y-4">
+                                <input
+                                    type="text"
+                                    value={tempUserName}
+                                    onChange={(e) => setTempUserName(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+                                    placeholder="例如：張三、李四"
+                                    onKeyPress={(e) => e.key === 'Enter' && handleUserSetup()}
+                                />
+                                <button
+                                    onClick={handleUserSetup}
+                                    disabled={!tempUserName.trim()}
+                                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 text-lg font-medium"
+                                >
+                                    開始使用
+                                </button>
+                            </div>
+                            
+                            {allUsers.length > 0 && (
+                                <div className="mt-6 pt-4 border-t">
+                                    <p className="text-sm text-gray-600 mb-2">曾經使用過的用戶：</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {allUsers.map(user => (
+                                            <button
+                                                key={user}
+                                                onClick={() => {
+                                                    setTempUserName(user);
+                                                    // 直接執行用戶設定邏輯
+                                                    const userName = user.trim();
+                                                    setCurrentUser(userName);
+                                                    setShowUserSetup(false);
+                                                    
+                                                    const userKey = `projects_${userName}`;
+                                                    const savedData = localStorage.getItem(userKey);
+                                                    if (savedData) {
+                                                        try {
+                                                            const parsed = JSON.parse(savedData);
+                                                            const projectsWithDates = parsed.projects?.map(p => ({
+                                                                ...p,
+                                                                startDate: new Date(p.startDate),
+                                                                endDate: new Date(p.endDate),
+                                                                detail: p.detail || '',
+                                                                creator: p.creator || userName
+                                                            })) || [];
+                                                            setProjects(projectsWithDates);
+                                                            setProjectTypes(parsed.projectTypes || projectTypes);
+                                                        } catch (e) {
+                                                            console.error('載入資料失敗:', e);
+                                                        }
+                                                    } else {
+                                                        // 如果沒有保存的資料，重置為空
+                                                        setProjects([]);
+                                                        setProjectTypes([
+                                                            { name: '圖說', color: 'bg-red-500' },
+                                                            { name: '報告書', color: 'bg-green-500' },
+                                                            { name: '預算規劃', color: 'bg-blue-500' },
+                                                            { name: '行政維護', color: 'bg-yellow-500' },
+                                                            { name: '報告', color: 'bg-teal-500' },
+                                                        ]);
+                                                    }
+                                                }}
+                                                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200 transition-colors"
+                                            >
+                                                {user}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            const days = getDaysInMonth(currentDate);
+            const weeks = [];
+            for (let i = 0; i < days.length; i += 7) {
+                weeks.push(days.slice(i, i + 7));
+            }
+
+            return (
+                <div className={`min-h-screen bg-gray-50 p-4 ${isPrinting ? 'is-printing' : ''}`}>
+                    <div className="max-w-7xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-sm mb-6 p-4 no-print">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center space-x-4 flex-wrap">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="font-medium text-lg">歡迎，{currentUser}</span>
+                                        <button
+                                            onClick={() => setShowUserSetup(true)}
+                                            className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                                        >
+                                            切換用戶
+                                        </button>
+                                    </div>
+
+                                    <button onClick={() => setShowAddForm(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"> + 新增專案 </button>
+                                    <button onClick={() => setShowTypeManager(true)} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"> 管理類型 </button>
+                                    <button onClick={() => setShowExportManager(true)} className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"> 匯出/導入 </button>
+                                    <button 
+                                        onClick={() => setShowUserInProgressBar(!showUserInProgressBar)} 
+                                        className={`px-4 py-2 rounded-lg transition-colors ${showUserInProgressBar ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}`}
+                                        title={showUserInProgressBar ? '點擊隱藏使用者名稱' : '點擊顯示使用者名稱'}
+                                    > 
+                                        {showUserInProgressBar ? '隱藏使用者' : '顯示使用者'} 
+                                    </button>
+                                    <button onClick={handlePrint} className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"> 列印本月 </button>
+                                    
+                                    <div className="flex items-center space-x-2">
+                                        <button onClick={() => navigateMonth(-1)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-xl"> ← </button>
+                                        <h1 className="text-xl font-semibold"> {currentDate.getFullYear()}年{monthNames[currentDate.getMonth()]} </h1>
+                                        <button onClick={() => navigateMonth(1)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-xl"> → </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex space-x-2">
+                                    <button onClick={() => setViewMode('month')} className={`px-3 py-1 text-sm border rounded transition-colors ${ viewMode === 'month' ? 'bg-blue-600 text-white' : 'hover:bg-gray-50' }`}> 月 </button>
+                                    <button onClick={() => setViewMode('agenda')} className={`px-3 py-1 text-sm border rounded transition-colors ${ viewMode === 'agenda' ? 'bg-blue-600 text-white' : 'hover:bg-gray-50' }`}> 議程 </button>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-4 text-sm">
+                                {projectTypes.map((type) => (
+                                    <div key={type.name} className="flex items-center space-x-2">
+                                        <div className={`w-3 h-3 rounded ${type.color}`}></div>
+                                        <span className="text-gray-700">{type.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {viewMode === 'month' && (
+                            <div className="bg-white rounded-lg shadow-sm printable-area">
+                                <div className="print-title">
+                                    {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
+                                </div>
+                                <div className="grid grid-cols-7 border-b">
+                                    {weekDays.map((day) => (
+                                        <div key={day} className="p-2 md:p-6 text-center font-medium text-gray-600 border-r last:border-r-0">
+                                            {day}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="relative calendar-weeks-container">
+                                    {weeks.map((week, weekIndex) => (
+                                        <div key={weekIndex} className="relative calendar-week-row">
+                                            <div className="grid grid-cols-7 border-b last:border-b-0" style={{ minHeight: isPrinting ? 'auto' : '200px' }}>
+                                                {week.map((day) => {
+                                                    const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                                                    const isToday = day.toDateString() === new Date().toDateString();
+                                                    
+                                                    return (
+                                                        <div
+                                                            key={day.toISOString()}
+                                                            className={`border-r last:border-r-0 p-3 ${ !isCurrentMonth ? 'bg-gray-50 text-gray-400' : '' } ${isToday && !isPrinting ? 'bg-blue-50' : ''}`}
+                                                            style={{ minHeight: isPrinting ? 'auto' : '200px' }}
+                                                        >
+                                                            <div className={`text-base mb-2 ${isToday ? 'font-bold text-blue-600' : ''}`}>
+                                                                {day.getDate()}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                <div className="relative h-full w-full">
+                                                    {(() => {
+                                                        const weekProjects = projects.filter(project => calculateProjectSegments(project, week) !== null);
+                                                        const projectLayers = [];
+                                                        weekProjects.forEach(project => {
+                                                            const segments = calculateProjectSegments(project, week);
+                                                            if (segments) {
+                                                                let layerIndex = 0;
+                                                                while (projectLayers[layerIndex] && 
+                                                                       projectLayers[layerIndex].some(existingProject => {
+                                                                         const existingSegments = calculateProjectSegments(existingProject, week);
+                                                                         if (!existingSegments) return false;
+                                                                         return segments.some(seg => existingSegments.some(existingSeg => !(seg.endDay < existingSeg.startDay || seg.startDay > existingSeg.endDay)));
+                                                                       })) {
+                                                                  layerIndex++;
+                                                                }
+                                                                if (!projectLayers[layerIndex]) projectLayers[layerIndex] = [];
+                                                                projectLayers[layerIndex].push(project);
+                                                            }
+                                                        });
+
+                                                        return projectLayers.map((layer, layerIndex) => 
+                                                            layer.map(project => {
+                                                                const segments = calculateProjectSegments(project, week);
+                                                                if (!segments) return null;
+                                                                
+                                                                return segments.map((segment, segmentIndex) => {
+                                                                    // 根據使用者設定決定是否顯示建立者名稱
+                                                                    const displayText = project.detail 
+                                                                        ? `${project.title}:${project.type}-${project.detail}${showUserInProgressBar ? `(${project.creator || '未知'})` : ''}`
+                                                                        : `${project.title}:${project.type}${showUserInProgressBar ? `(${project.creator || '未知'})` : ''}`;
+                                                                    
+                                                                    const topPosition = isPrinting ? (28 + layerIndex * 22) : (45 + layerIndex * 32);
+                                                                    const height = isPrinting ? '20px' : '28px';
+                                                                    const padding = isPrinting ? 'px-2 py-1' : 'px-3 py-2';
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={`${project.id}-${segmentIndex}`}
+                                                                            className={`absolute ${project.color} text-white text-sm ${padding} rounded shadow-sm hover:shadow-md transition-all cursor-pointer pointer-events-auto ${ segment.isExpired ? 'opacity-40' : 'opacity-90 hover:opacity-100' }`}
+                                                                            style={{ left: segment.left, width: segment.width, top: `${topPosition}px`, height: height, zIndex: 10 }}
+                                                                            title={`${displayText} ${segment.isExpired ? '- 已過期' : segment.isOngoing ? '- 進行中' : ''}`}
+                                                                            onClick={() => handleEditProject(project)}
+                                                                        >
+                                                                            <div className="truncate leading-tight project-bar-text"> {displayText} </div>
+                                                                        </div>
+                                                                    );
+                                                                });
+                                                            })
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {viewMode === 'agenda' && (
+                            <div className="bg-white rounded-lg shadow-sm p-6 no-print">
+                                <h2 className="text-lg font-semibold mb-4">議程檢視</h2>
+                                <div className="space-y-3">
+                                    {projects
+                                        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+                                        .map(project => {
+                                            const today = new Date(); today.setHours(0, 0, 0, 0);
+                                            const isExpired = new Date(project.endDate) < today;
+                                            return (
+                                                <div key={project.id} className={`flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${ isExpired ? 'opacity-50' : '' }`} onClick={() => handleEditProject(project)}>
+                                                    <div className={`w-4 h-4 rounded ${project.color}`}></div>
+                                                    <div className="flex-1">
+                                                        <h3 className="font-medium">{project.title}</h3>
+                                                        <p className="text-sm text-gray-600"> 
+                                                            {project.type}{project.detail ? ` - ${project.detail}` : ''} 
+                                                            {showUserInProgressBar && <span className="ml-2 text-blue-600">({project.creator || '未知'})</span>}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {project.startDate.toLocaleDateString('zh-TW')} - {project.endDate.toLocaleDateString('zh-TW')}
+                                                        {isExpired && <span className="ml-2 text-red-500">已過期</span>}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            </div>
+                        )}
+
+                        {showAddForm && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 no-print"> <div className="bg-white rounded-lg p-6 w-96"> <h3 className="text-lg font-semibold mb-4">新增專案</h3> <div className="space-y-4"> <div> <label className="block text-sm font-medium mb-1">專案名稱(專案管理請於"其他"新增項目負責人)</label> <select value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value, customTitle: ''})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">請選擇專案</option> {projectOptions.map(option => ( <option key={option} value={option}>{option}</option> ))} </select> </div> {newProject.title === '其他' && ( <div> <label className="block text-sm font-medium mb-1">自訂專案名稱(或項目負責人)</label> <input type="text" value={newProject.customTitle} onChange={(e) => setNewProject({...newProject, customTitle: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入自訂專案名稱(或項目負責人)"/> </div> )} <div> <label className="block text-sm font-medium mb-1">專案類型</label> <select value={newProject.type} onChange={(e) => setNewProject({...newProject, type: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">請選擇類型</option> {projectTypes.map(type => ( <option key={type.name} value={type.name}>{type.name}</option> ))} </select> </div> <div> <label className="block text-sm font-medium mb-1">細項</label> <input type="text" value={newProject.detail} onChange={(e) => setNewProject({...newProject, detail: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入專案細項 (選填)"/> </div> <div> <label className="block text-sm font-medium mb-1">開始日期</label> <input type="date" value={newProject.startDate} onChange={(e) => setNewProject({...newProject, startDate: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div> <div> <label className="block text-sm font-medium mb-1">結束日期</label> <input type="date" value={newProject.endDate} onChange={(e) => setNewProject({...newProject, endDate: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div> </div> <div className="flex space-x-3 mt-6"> <button onClick={handleAddProject} className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"> 新增 </button> <button onClick={() => { setShowAddForm(false); setNewProject({ title: '', customTitle: '', type: projectTypes.length > 0 ? projectTypes[0].name : '', detail: '', startDate: '', endDate: '' }); }} className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 transition-colors"> 取消 </button> </div> </div> </div> )}
+                        {showEditForm && selectedProject && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 no-print"> <div className="bg-white rounded-lg p-6 w-96"> <h3 className="text-lg font-semibold mb-4">編輯專案</h3> <div className="space-y-4"> <div> <label className="block text-sm font-medium mb-1">專案名稱(專案管理請於"其他"新增項目負責人)</label> <select value={selectedProject.title} onChange={(e) => setSelectedProject({...selectedProject, title: e.target.value, customTitle: e.target.value === '其他' ? selectedProject.customTitle : ''})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"> {projectOptions.map(option => ( <option key={option} value={option}>{option}</option> ))} </select> </div> {selectedProject.title === '其他' && ( <div> <label className="block text-sm font-medium mb-1">自訂專案名稱(或項目負責人)</label> <input type="text" value={selectedProject.customTitle || ''} onChange={(e) => setSelectedProject({...selectedProject, customTitle: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入自訂專案名稱(或項目負責人)"/> </div> )} <div> <label className="block text-sm font-medium mb-1">專案類型</label> <select value={selectedProject.type} onChange={(e) => setSelectedProject({...selectedProject, type: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"> {projectTypes.map(type => ( <option key={type.name} value={type.name}>{type.name}</option> ))} </select> </div> <div> <label className="block text-sm font-medium mb-1">細項</label> <input type="text" value={selectedProject.detail || ''} onChange={(e) => setSelectedProject({...selectedProject, detail: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入專案細項 (選填)"/> </div> <div> <label className="block text-sm font-medium mb-1">開始日期</label> <input type="date" value={selectedProject.startDate} onChange={(e) => setSelectedProject({...selectedProject, startDate: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div> <div> <label className="block text-sm font-medium mb-1">結束日期</label> <input type="date" value={selectedProject.endDate} onChange={(e) => setSelectedProject({...selectedProject, endDate: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div> </div> <div className="flex space-x-3 mt-6"> <button onClick={handleUpdateProject} className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"> 更新 </button> <button onClick={() => handleDeleteProject(selectedProject.id)} className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors"> 刪除 </button> <button onClick={() => { setShowEditForm(false); setSelectedProject(null); }} className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 transition-colors"> 取消 </button> </div> </div> </div> )}
+                        {showTypeManager && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 no-print"> <div className="bg-white rounded-lg p-6 w-[500px] max-w-90vw max-h-[80vh] overflow-y-auto"> <h3 className="text-lg font-semibold mb-4">管理專案類型</h3> <div className="mb-6 p-4 bg-gray-50 rounded-lg"> <h4 className="font-medium mb-3">新增類型</h4> <div className="space-y-3"> <div> <label className="block text-sm font-medium mb-1">類型名稱</label> <input type="text" value={newType.name} onChange={(e) => setNewType({...newType, name: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入類型名稱"/> </div> <div> <label className="block text-sm font-medium mb-1">顏色</label> <div className="flex flex-wrap gap-2"> {availableColors.map(color => ( <button key={color} onClick={() => setNewType({...newType, color})} className={`w-8 h-8 rounded ${color} border-2 transition-all ${ newType.color === color ? 'border-gray-800 scale-110' : 'border-gray-300' }`}/> ))} </div> </div> <button onClick={handleAddType} className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"> 新增類型 </button> </div> </div> <div> <h4 className="font-medium mb-3">現有類型</h4> <div className="space-y-2"> {projectTypes.map((type) => { const isInUse = projects.some(project => project.type === type.name); return ( <div key={type.name} className="flex items-center justify-between p-3 border rounded-lg"> <div className="flex items-center space-x-3"> <div className={`w-4 h-4 rounded ${type.color}`}></div> <span className="font-medium">{type.name}</span> {isInUse && <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">使用中</span>} </div> <button onClick={() => handleDeleteType(type.name)} disabled={isInUse} className={`px-3 py-1 text-sm rounded transition-colors ${ isInUse ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-600 hover:bg-red-200' }`}> 刪除 </button> </div> ); })} </div> </div> <div className="flex space-x-3 mt-6"> <button onClick={() => { setShowTypeManager(false); setNewType({ name: '', color: 'bg-blue-500' }); }} className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 transition-colors"> 關閉 </button> </div> </div> </div> )}
+                        {showExportManager && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 no-print"> <div className="bg-white rounded-lg p-6 w-[600px] max-w-90vw max-h-[80vh] overflow-y-auto"> <h3 className="text-lg font-semibold mb-4">資料匯出與導入</h3> <div className="mb-6 p-4 bg-blue-50 rounded-lg"> <h4 className="font-medium mb-3 text-blue-800">匯出個人資料</h4> <p className="text-sm text-gray-600 mb-3"> 將您的專案資料匯出為 JSON 檔案，可在其他電腦使用或作為備份。 </p> <button onClick={exportData} className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"> <span>📥</span> <span>匯出我的資料</span> </button> </div> <div className="mb-6 p-4 bg-green-50 rounded-lg"> <h4 className="font-medium mb-3 text-green-800">導入資料</h4> <p className="text-sm text-gray-600 mb-3"> 導入之前匯出的 JSON 檔案，資料會合併到您目前的專案中。 </p> <label className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors cursor-pointer flex items-center justify-center space-x-2"> <span>📤</span> <span>選擇檔案導入</span> <input type="file" accept=".json" onChange={importData} className="hidden"/> </label> </div> <div className="p-4 bg-yellow-50 rounded-lg"> <h4 className="font-medium mb-2 text-yellow-800">📊 統計用途</h4> <div className="text-sm text-gray-700 space-y-1"> <p><strong>個人使用：</strong>換電腦時導入資料即可繼續使用</p> <p><strong>團隊統計：</strong>收集所有人的匯出檔案後，可逐一導入查看全團隊專案</p> <p><strong>備份建議：</strong>建議每週匯出一次作為備份</p> </div> </div> <div className="flex space-x-3 mt-6"> <button onClick={() => setShowExportManager(false)} className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 transition-colors"> 關閉 </button> </div> </div> </div> )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<ProjectCalendar />, document.getElementById('root'));
+    </script>
+</body>
+</html>
+                                                                  
