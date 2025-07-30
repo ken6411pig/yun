@@ -757,29 +757,66 @@
                         {viewMode === 'agenda' && (
                             <div className="bg-white rounded-lg shadow-sm p-6 no-print">
                                 <h2 className="text-lg font-semibold mb-4">議程檢視</h2>
-                                <div className="space-y-3">
-                                    {projects
-                                        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-                                        .map(project => {
-                                            const today = new Date(); today.setHours(0, 0, 0, 0);
-                                            const isExpired = new Date(project.endDate) < today;
+                                <div className="space-y-4">
+                                    {(() => {
+                                        // 按專案名稱分組
+                                        const groupedProjects = projects.reduce((groups, project) => {
+                                            const projectName = project.title;
+                                            if (!groups[projectName]) {
+                                                groups[projectName] = [];
+                                            }
+                                            groups[projectName].push(project);
+                                            return groups;
+                                        }, {});
+
+                                        // 對每個專案群組內的項目按開始日期排序
+                                        Object.keys(groupedProjects).forEach(projectName => {
+                                            groupedProjects[projectName].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                                        });
+
+                                        // 按專案名稱排序
+                                        const sortedProjectNames = Object.keys(groupedProjects).sort();
+
+                                        return sortedProjectNames.map(projectName => {
+                                            const projectItems = groupedProjects[projectName];
+                                            
                                             return (
-                                                <div key={project.id} className={`flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${ isExpired ? 'opacity-50' : '' }`} onClick={() => handleEditProject(project)}>
-                                                    <div className={`w-4 h-4 rounded ${project.color}`}></div>
-                                                    <div className="flex-1">
-                                                        <h3 className="font-medium">{project.title}</h3>
-                                                        <p className="text-sm text-gray-600"> 
-                                                            {project.type}{project.detail ? ` - ${project.detail}` : ''} 
-                                                            {showUserInProgressBar && <span className="ml-2 text-blue-600">({project.creator || '未知'})</span>}
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-sm text-gray-500">
-                                                        {project.startDate.toLocaleDateString('zh-TW')} - {project.endDate.toLocaleDateString('zh-TW')}
-                                                        {isExpired && <span className="ml-2 text-red-500">已過期</span>}
+                                                <div key={projectName} className="border rounded-lg p-4 bg-gray-50">
+                                                    <h3 className="text-lg font-semibold mb-3 text-gray-800">{projectName}</h3>
+                                                    <div className="space-y-2 ml-4">
+                                                        {projectItems.map(project => {
+                                                            const today = new Date(); 
+                                                            today.setHours(0, 0, 0, 0);
+                                                            const isExpired = new Date(project.endDate) < today;
+                                                            const isOngoing = new Date(project.startDate) <= today && new Date(project.endDate) >= today;
+                                                            
+                                                            return (
+                                                                <div 
+                                                                    key={project.id} 
+                                                                    className={`flex items-center space-x-3 p-3 border rounded-lg bg-white hover:bg-gray-50 cursor-pointer transition-colors ${ isExpired ? 'opacity-50' : '' }`} 
+                                                                    onClick={() => handleEditProject(project)}
+                                                                >
+                                                                    <div className={`w-4 h-4 rounded ${project.color}`}></div>
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center space-x-2">
+                                                                            <span className="font-medium">{project.type}</span>
+                                                                            {project.detail && <span className="text-sm text-gray-600">- {project.detail}</span>}
+                                                                            {showUserInProgressBar && <span className="text-sm text-blue-600">({project.creator || '未知'})</span>}
+                                                                            {isOngoing && <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">進行中</span>}
+                                                                            {isExpired && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">已過期</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-sm text-gray-500">
+                                                                        {project.startDate.toLocaleDateString('zh-TW')} - {project.endDate.toLocaleDateString('zh-TW')}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                             );
-                                        })}
+                                        });
+                                    })()}
                                 </div>
                             </div>
                         )}
