@@ -22,19 +22,115 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
+/* 創建左右分欄布局 */
+.is-printing .print-layout {
+flex-direction: row !important;
+    display: flex !important;
+    width: 100% !important;
+    height: calc(100vh - 1cm) !important;
+    max-height: calc(100vh - 1cm) !important;
+    overflow: hidden !important;
+}
+
+.is-printing .printable-area {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: calc(100vh - 1cm); 
+    width: 80% !important;
+}
+
+.is-printing .memo-area {
+    width: 20% !important;
+    height: 100% !important;
+    padding: 20px !important;
+    display: flex !important;
+    flex-shrink: 0 !important; /* 防止被壓縮 */
+    flex-direction: column !important;
+    background: white !important;
+}
+
+.is-printing .memo-content {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+}
+
+.is-printing .memo-section {
+    margin-bottom: 10px !important;
+}
+
+.is-printing .memo-section-title {
+    font-weight: bold !important;
+    font-size: 16pt !important;
+    margin-bottom: 5px !important;
+color: #B22222 !important;
+}
+
+.is-printing .memo-item {
+    font-size: 16pt !important;
+    font-weight: bold !important;
+    margin-bottom: 3px !important;
+    padding-left: 10px !important;
+}
+
+.is-printing .memo-title {
+    font-size: 18pt !important;
+    font-weight: bold !important;
+    margin-bottom: 15px !important;
+    text-align: center !important;
+    border-bottom: 1px solid #000 !important;
+    padding-bottom: 5px !important;
+}
+
+.is-printing .memo-lines {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+}
+
+.is-printing .memo-line {
+    border-bottom: 1px solid #666 !important;
+    height: 20px !important;
+    width: 100% !important;
+}
+
+/* 確保最外層容器完全填滿 */
+.is-printing .max-w-7xl {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 確保日曆容器完全填滿 */
+.is-printing .bg-white.rounded-lg.shadow-sm {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* 移除最外層的 padding */
+.is-printing {
+    padding: 0 !important;
+}
+
+/* 確保日曆週容器填滿寬度 */
+.is-printing .calendar-weeks-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
 
             .is-printing .no-print {
                 display: none !important;
             }
             
-            .is-printing .printable-area {
-                box-shadow: none !important;
-                border: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                height: calc(100vh - 3cm); 
-            }
-
             /* 議程列印樣式 */
             .is-printing .agenda-printable {
                 box-shadow: none !important;
@@ -137,7 +233,7 @@
             }
 
             .is-printing .project-bar-text {
-                font-size: 14pt !important;
+                font-size: 12pt !important;
                 line-height: 1.2 !important;
                 color: white !important;
                 font-weight: 500 !important;
@@ -159,14 +255,19 @@
                 display: flex;
                 flex-direction: column;
                 height: calc(100% - 50px);
+    width: 100%;
             }
             .is-printing .calendar-week-row {
                 flex: 1; 
                 display: flex;
                 flex-direction: column;
+min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
             }
             .is-printing .calendar-week-row > div {
                 flex: 1; 
+            }
+            .is-printing .calendar-week-row {
+                min-height: 150px !important;
             }
 
             /* A3列印時的日期格子調整 */
@@ -944,99 +1045,144 @@
                             </div>
                         </div>
 
-                        {viewMode === 'month' && (
-                            <div className="bg-white rounded-lg shadow-sm printable-area">
-                                <div className="print-title">
-                                    專案：{currentProject} - {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
-                                </div>
-                                <div className="grid grid-cols-7 border-b">
-                                    {weekDays.map((day) => (
-                                        <div key={day} className="p-2 md:p-6 text-center font-medium text-gray-600 border-r last:border-r-0">
-                                            {day}
+{viewMode === 'month' && (
+    <div className="print-layout">
+        <div className="bg-white rounded-lg shadow-sm printable-area">
+            <div className="print-title">
+                專案：{currentProject} - {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
+            </div>
+            <div className="grid grid-cols-7 border-b">
+                {weekDays.map((day) => (
+                    <div key={day} className="p-2 md:p-6 text-center font-medium text-gray-600 border-r last:border-r-0">
+                        {day}
+                    </div>
+                ))}
+            </div>
+
+            <div className="relative calendar-weeks-container">
+                {weeks.map((week, weekIndex) => (
+                    <div key={weekIndex} className="relative calendar-week-row">
+                        <div className="grid grid-cols-7 border-b last:border-b-0" style={{ minHeight: isPrinting ? 'auto' : '200px' }}>
+                            {week.map((day) => {
+                                const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                                const isToday = day.toDateString() === new Date().toDateString();
+                                
+                                return (
+                                    <div
+                                        key={day.toISOString()}
+                                        className={`border-r last:border-r-0 p-3 ${ !isCurrentMonth ? 'bg-gray-50 text-gray-400' : '' } ${isToday && !isPrinting ? 'bg-blue-50' : ''}`}
+                                        style={{ minHeight: isPrinting ? 'auto' : '200px' }}
+                                    >
+                                        <div className={`text-base mb-2 ${isToday ? 'font-bold text-blue-600' : ''}`}>
+                                            {day.getDate()}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
 
-                                <div className="relative calendar-weeks-container">
-                                    {weeks.map((week, weekIndex) => (
-                                        <div key={weekIndex} className="relative calendar-week-row">
-                                            <div className="grid grid-cols-7 border-b last:border-b-0" style={{ minHeight: isPrinting ? 'auto' : '200px' }}>
-                                                {week.map((day) => {
-                                                    const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-                                                    const isToday = day.toDateString() === new Date().toDateString();
-                                                    
-                                                    return (
-                                                        <div
-                                                            key={day.toISOString()}
-                                                            className={`border-r last:border-r-0 p-3 ${ !isCurrentMonth ? 'bg-gray-50 text-gray-400' : '' } ${isToday && !isPrinting ? 'bg-blue-50' : ''}`}
-                                                            style={{ minHeight: isPrinting ? 'auto' : '200px' }}
-                                                        >
-                                                            <div className={`text-base mb-2 ${isToday ? 'font-bold text-blue-600' : ''}`}>
-                                                                {day.getDate()}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="relative h-full w-full">
+                                {(() => {
+                                    const weekItems = items.filter(item => calculateItemSegments(item, week) !== null);
+                                    const itemLayers = [];
+                                    weekItems.forEach(item => {
+                                        const segments = calculateItemSegments(item, week);
+                                        if (segments) {
+                                            let layerIndex = 0;
+                                            while (itemLayers[layerIndex] && 
+                                                   itemLayers[layerIndex].some(existingItem => {
+                                                     const existingSegments = calculateItemSegments(existingItem, week);
+                                                     if (!existingSegments) return false;
+                                                     return segments.some(seg => existingSegments.some(existingSeg => !(seg.endDay < existingSeg.startDay || seg.startDay > existingSeg.endDay)));
+                                                   })) {
+                                              layerIndex++;
+                                            }
+                                            if (!itemLayers[layerIndex]) itemLayers[layerIndex] = [];
+                                            itemLayers[layerIndex].push(item);
+                                        }
+                                    });
 
-                                            <div className="absolute inset-0 pointer-events-none">
-                                                <div className="relative h-full w-full">
-                                                    {(() => {
-                                                        const weekItems = items.filter(item => calculateItemSegments(item, week) !== null);
-                                                        const itemLayers = [];
-                                                        weekItems.forEach(item => {
-                                                            const segments = calculateItemSegments(item, week);
-                                                            if (segments) {
-                                                                let layerIndex = 0;
-                                                                while (itemLayers[layerIndex] && 
-                                                                       itemLayers[layerIndex].some(existingItem => {
-                                                                         const existingSegments = calculateItemSegments(existingItem, week);
-                                                                         if (!existingSegments) return false;
-                                                                         return segments.some(seg => existingSegments.some(existingSeg => !(seg.endDay < existingSeg.startDay || seg.startDay > existingSeg.endDay)));
-                                                                       })) {
-                                                                  layerIndex++;
-                                                                }
-                                                                if (!itemLayers[layerIndex]) itemLayers[layerIndex] = [];
-                                                                itemLayers[layerIndex].push(item);
-                                                            }
-                                                        });
-
-                                                        return itemLayers.map((layer, layerIndex) => 
-                                                            layer.map(item => {
-                                                                const segments = calculateItemSegments(item, week);
-                                                                if (!segments) return null;
-                                                                
-                                                                return segments.map((segment, segmentIndex) => {
-                                                                    const displayText = item.detail 
-                                                                        ? `${item.title}:${item.type}-${item.detail}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`
-                                                                        : `${item.title}:${item.type}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`;
-                                                                    
-                                                                    const topPosition = isPrinting ? (35 + layerIndex * 28) : (45 + layerIndex * 32);
-                                                                    const height = isPrinting ? '26px' : '28px';
-                                                                    const padding = isPrinting ? 'px-2 py-1' : 'px-3 py-2';
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={`${item.id}-${segmentIndex}`}
-                                                                            className={`absolute ${item.color} text-white text-sm ${padding} rounded shadow-sm hover:shadow-md transition-all cursor-pointer pointer-events-auto ${ segment.isExpired ? 'opacity-40' : 'opacity-90 hover:opacity-100' }`}
-                                                                            style={{ left: segment.left, width: segment.width, top: `${topPosition}px`, height: height, zIndex: 10 }}
-                                                                            title={`${displayText} ${segment.isExpired ? '- 已過期' : segment.isOngoing ? '- 進行中' : ''}`}
-                                                                            onClick={() => handleEditItem(item)}
-                                                                        >
-                                                                            <div className="truncate leading-tight project-bar-text"> {displayText} </div>
-                                                                        </div>
-                                                                    );
-                                                                });
-                                                            })
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                    return itemLayers.map((layer, layerIndex) => 
+                                        layer.map(item => {
+                                            const segments = calculateItemSegments(item, week);
+                                            if (!segments) return null;
+                                            
+                                            return segments.map((segment, segmentIndex) => {
+                                                const displayText = item.detail 
+                                                    ? `${item.title}:${item.type}-${item.detail}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`
+                                                    : `${item.title}:${item.type}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`;
+                                                
+                                                const topPosition = isPrinting ? (35 + layerIndex * 24) : (45 + layerIndex * 32);
+                                                const height = isPrinting ? '22px' : '28px';
+                                                const padding = isPrinting ? 'px-2 py-1' : 'px-3 py-2';
+                                                
+                                                return (
+                                                    <div
+                                                        key={`${item.id}-${segmentIndex}`}
+                                                        className={`absolute ${item.color} text-white text-sm ${padding} rounded shadow-sm hover:shadow-md transition-all cursor-pointer pointer-events-auto ${ segment.isExpired ? 'opacity-40' : 'opacity-90 hover:opacity-100' }`}
+                                                        style={{ left: segment.left, width: segment.width, top: `${topPosition}px`, height: height, zIndex: 10 }}
+                                                        title={`${displayText} ${segment.isExpired ? '- 已過期' : segment.isOngoing ? '- 進行中' : ''}`}
+                                                        onClick={() => handleEditItem(item)}
+                                                    >
+                                                        <div className="truncate leading-tight project-bar-text"> {displayText} </div>
+                                                    </div>
+                                                );
+                                            });
+                                        })
+                                    );
+                                })()}
                             </div>
-                        )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+<div className="memo-area" style={{ display: isPrinting ? 'flex' : 'none' }}>
+    <div className="memo-content">
+        <div className="memo-section">
+            <div className="memo-section-title"> </div>
+            <div className="memo-section-title">新建/歷建圖面(現況、修復)</div>
+            <div className="memo-item">A0基本資料(位置、面積)</div>
+            <div className="memo-item">A1假設工程、發包事項</div>
+            <div className="memo-item">A2平面圖</div>
+            <div className="memo-item">A3立面圖</div>
+            <div className="memo-item">A4剖面圖</div>
+            <div className="memo-item">A5設備指標圖</div>
+            <div className="memo-item">A6櫃體圖</div>
+            <div className="memo-item">A7細部圖</div>
+            <div className="memo-item">S結構圖</div>
+            <div className="memo-item">EPW機電圖</div>
+            <div className="memo-item">F消防圖</div>
+            <div className="memo-item">M空調圖</div>
+        </div>
+        
+        <div className="memo-section">
+            <div className="memo-section-title">預算</div>
+            <div className="memo-item">總表</div>
+            <div className="memo-item">詳細表</div>
+            <div className="memo-item">數量計算表</div>
+            <div className="memo-item">資源統計表</div>
+            <div className="memo-item">PCCES</div>
+        </div>
+        
+        <div className="memo-section">
+            <div className="memo-section-title">技師</div>
+            <div className="memo-item">一個月前給平面圖</div>
+            <div className="memo-item">第三個禮拜交圖先整合</div>
+            <div className="memo-item">第四個禮拜交預算</div>
+        </div>
+    </div>
+</div>
+
+
+
+    </div>
+)}
+
+
+
 
                         {viewMode === 'agenda' && (
                             <div className={`bg-white rounded-lg shadow-sm p-6 agenda-printable ${isPrinting ? '' : 'no-print'}`}>
