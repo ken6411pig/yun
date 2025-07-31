@@ -11,7 +11,7 @@
     <style>
         @media print {
             @page {
-                size: A4 landscape;
+                size: A3 landscape;
                 margin: 1cm; 
             }
 
@@ -35,6 +35,95 @@
                 height: calc(100vh - 3cm); 
             }
 
+            /* 議程列印樣式 */
+            .is-printing .agenda-printable {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 20px !important;
+                margin: 0 !important;
+                background: white !important;
+            }
+
+            .is-printing .agenda-print-title {
+                display: block !important;
+                text-align: center;
+                font-size: 18pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+            }
+
+            .is-printing .person-group {
+                margin-bottom: 25px !important;
+                page-break-inside: avoid;
+            }
+
+            .is-printing .person-title {
+                font-size: 16pt !important;
+                font-weight: bold !important;
+                color: #000 !important;
+                border-bottom: 1px solid #666 !important;
+                padding-bottom: 8px !important;
+                margin-bottom: 15px !important;
+            }
+
+            .is-printing .item-row {
+                font-size: 12pt !important;
+                margin-bottom: 12px !important;
+                padding: 8px !important;
+                border: 1px solid #ccc !important;
+                border-radius: 4px !important;
+                page-break-inside: avoid;
+            }
+
+            .is-printing .item-content {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+            }
+
+            .is-printing .item-info {
+                flex: 1 !important;
+            }
+
+            .is-printing .item-type {
+                font-weight: bold !important;
+                font-size: 13pt !important;
+            }
+
+            .is-printing .item-dates {
+                font-size: 11pt !important;
+                color: #666 !important;
+                margin-top: 4px !important;
+            }
+
+            .is-printing .item-status {
+                display: flex !important;
+                align-items: center !important;
+                gap: 15px !important;
+                white-space: nowrap !important;
+            }
+
+            .is-printing .status-box {
+                width: 12px !important;
+                height: 12px !important;
+                border: 2px solid #000 !important;
+                display: inline-block !important;
+                margin-right: 5px !important;
+            }
+
+            .is-printing .status-checked {
+                background-color: #000 !important;
+            }
+
+            .is-printing .notes-line {
+                border-bottom: 1px solid #000 !important;
+                min-width: 120px !important;
+                height: 20px !important;
+                display: inline-block !important;
+            }
+
              .is-printing, .is-printing * {
                 color: #000 !important;
              }
@@ -48,9 +137,10 @@
             }
 
             .is-printing .project-bar-text {
-                font-size: 12pt !important;
-                line-height: 1.1 !important;
+                font-size: 14pt !important;
+                line-height: 1.2 !important;
                 color: white !important;
+                font-weight: 500 !important;
             }
             
             .is-printing .opacity-40 { opacity: 0.6 !important; }
@@ -59,16 +149,16 @@
             .is-printing .print-title {
                 display: block;
                 text-align: center;
-                font-size: 16pt;
+                font-size: 20pt;
                 font-weight: bold;
-                margin-bottom: 10px;
-                height: 40px;
+                margin-bottom: 15px;
+                height: 50px;
             }
             
             .is-printing .calendar-weeks-container {
                 display: flex;
                 flex-direction: column;
-                height: calc(100% - 40px);
+                height: calc(100% - 50px);
             }
             .is-printing .calendar-week-row {
                 flex: 1; 
@@ -77,6 +167,25 @@
             }
             .is-printing .calendar-week-row > div {
                 flex: 1; 
+            }
+
+            /* A3列印時的日期格子調整 */
+            .is-printing .grid.grid-cols-7 > div {
+                font-size: 30pt !important;
+                padding: 8px !important;
+            }
+
+            /* A3列印時週標題調整 */
+            .is-printing .grid.grid-cols-7.border-b > div {
+                font-size: 18pt !important;
+                font-weight: bold !important;
+                padding: 12px !important;
+            }
+
+            /* 議程模式的A4直式設定 - 使用更具體的選擇器 */
+            body.agenda-print.is-printing @page {
+                size: A4 portrait !important;
+                margin: 1.5cm !important;
             }
 
             * {
@@ -108,7 +217,7 @@
             const [showProjectManager, setShowProjectManager] = useState(false);
             const [allProjects, setAllProjects] = useState([]);
             const [isPrinting, setIsPrinting] = useState(false);
-            const [showUserInProgressBar, setShowUserInProgressBar] = useState(true);
+            const [showUserInProgressBar, setShowUserInProgressBar] = useState(false);
             const [itemTypes, setItemTypes] = useState([
                 { name: '重要節點', color: 'bg-red-500' },
                 { name: '技師', color: 'bg-green-500' },
@@ -119,6 +228,7 @@
                 { name: '規範', color: 'bg-orange-500' },
                 { name: '因應計畫', color: 'bg-indigo-500' },
                 { name: '行政', color: 'bg-gray-500' },
+                { name: '跑照', color: 'bg-pink-500' },
             ]);
             const [newType, setNewType] = useState({ name: '', color: 'bg-blue-500' });
             const [newItem, setNewItem] = useState({
@@ -126,7 +236,9 @@
                 type: '',
                 detail: '',
                 startDate: '',
-                endDate: ''
+                endDate: '',
+                status: '', // 'completed' or 'incomplete' or ''
+                notes: ''
             });
 
             const availableColors = [
@@ -239,9 +351,33 @@
             
             const handlePrint = () => {
                 setIsPrinting(true);
+                if (viewMode === 'agenda') {
+                    // 議程檢視使用A4直式
+                    document.body.classList.add('agenda-print');
+                    // 動態插入A4直式的CSS規則
+                    const style = document.createElement('style');
+                    style.id = 'agenda-print-style';
+                    style.textContent = `
+                        @media print {
+                            @page {
+                                size: A4 portrait !important;
+                                margin: 1.5cm !important;
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
                 setTimeout(() => {
                     window.print();
                     setIsPrinting(false);
+                    if (viewMode === 'agenda') {
+                        document.body.classList.remove('agenda-print');
+                        // 移除動態CSS
+                        const style = document.getElementById('agenda-print-style');
+                        if (style) {
+                            document.head.removeChild(style);
+                        }
+                    }
                 }, 500);
             };
 
@@ -257,7 +393,9 @@
                     startDate: new Date(newItem.startDate),
                     endDate: new Date(newItem.endDate),
                     color: typeInfo?.color || 'bg-blue-500',
-                    creator: currentProject
+                    creator: currentProject,
+                    status: '',
+                    notes: ''
                 };
                 
                 const newItems = [...items, item];
@@ -269,7 +407,9 @@
                     type: itemTypes.length > 0 ? itemTypes[0].name : '',
                     detail: '',
                     startDate: '',
-                    endDate: ''
+                    endDate: '',
+                    status: '',
+                    notes: ''
                 });
                 setShowAddForm(false);
             };
@@ -368,7 +508,9 @@
                     responsiblePerson: item.title,
                     startDate: item.startDate.toISOString().split('T')[0],
                     endDate: item.endDate.toISOString().split('T')[0],
-                    detail: item.detail || ''
+                    detail: item.detail || '',
+                    status: item.status || '',
+                    notes: item.notes || ''
                 });
                 setShowEditForm(true);
             };
@@ -390,6 +532,16 @@
                     setShowEditForm(false);
                     setSelectedItem(null);
                 }
+            };
+
+            const handleUpdateItemStatus = (itemId, status, notes = '') => {
+                const newItems = items.map(item => 
+                    item.id === itemId 
+                        ? { ...item, status, notes }
+                        : item
+                );
+                setItems(newItems);
+                saveItems(newItems, itemTypes);
             };
 
             const handleDeleteItem = (itemId) => {
@@ -749,7 +901,9 @@
                                         清空項目 
                                     </button>
                                     
-                                    <button onClick={handlePrint} className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"> 列印本月 </button>
+                                    <button onClick={handlePrint} className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"> 
+                                        {viewMode === 'month' ? '列印月曆' : '列印負責人清單'} 
+                                    </button>
                                     
                                     <div className="flex items-center space-x-2">
                                         <button onClick={() => navigateMonth(-1)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-xl"> ← </button>
@@ -760,7 +914,7 @@
 
                                 <div className="flex space-x-2">
                                     <button onClick={() => setViewMode('month')} className={`px-3 py-1 text-sm border rounded transition-colors ${ viewMode === 'month' ? 'bg-blue-600 text-white' : 'hover:bg-gray-50' }`}> 月 </button>
-                                    <button onClick={() => setViewMode('agenda')} className={`px-3 py-1 text-sm border rounded transition-colors ${ viewMode === 'agenda' ? 'bg-blue-600 text-white' : 'hover:bg-gray-50' }`}> 依負責人 </button>
+                                    <button onClick={() => setViewMode('agenda')} className={`px-3 py-1 text-sm border rounded transition-colors ${ viewMode === 'agenda' ? 'bg-blue-600 text-white' : 'hover:bg-gray-50' }`}> 負責人 </button>
                                 </div>
                             </div>
                             <div className="flex flex-wrap gap-4 text-sm">
@@ -840,8 +994,8 @@
                                                                         ? `${item.title}:${item.type}-${item.detail}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`
                                                                         : `${item.title}:${item.type}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`;
                                                                     
-                                                                    const topPosition = isPrinting ? (28 + layerIndex * 22) : (45 + layerIndex * 32);
-                                                                    const height = isPrinting ? '20px' : '28px';
+                                                                    const topPosition = isPrinting ? (35 + layerIndex * 28) : (45 + layerIndex * 32);
+                                                                    const height = isPrinting ? '26px' : '28px';
                                                                     const padding = isPrinting ? 'px-2 py-1' : 'px-3 py-2';
                                                                     
                                                                     return (
@@ -868,7 +1022,10 @@
                         )}
 
                         {viewMode === 'agenda' && (
-                            <div className="bg-white rounded-lg shadow-sm p-6 no-print">
+                            <div className={`bg-white rounded-lg shadow-sm p-6 agenda-printable ${isPrinting ? '' : 'no-print'}`}>
+                                <div className="agenda-print-title" style={{ display: 'none' }}>
+                                    專案：{currentProject}
+                                </div>
                                 <h2 className="text-lg font-semibold mb-4">負責人檢視</h2>
                                 <div className="space-y-6">
                                     {(() => {
@@ -891,8 +1048,8 @@
                                         const sortedPersons = Object.keys(groupedItems).sort();
 
                                         return sortedPersons.map(person => (
-                                            <div key={person} className="border rounded-lg p-4">
-                                                <h3 className="text-lg font-semibold mb-3 text-blue-600 border-b pb-2">
+                                            <div key={person} className="border rounded-lg p-4 person-group">
+                                                <h3 className="text-lg font-semibold mb-3 text-blue-600 border-b pb-2 person-title">
                                                     {person}
                                                 </h3>
                                                 <div className="space-y-2">
@@ -900,22 +1057,74 @@
                                                         const today = new Date(); 
                                                         today.setHours(0, 0, 0, 0);
                                                         const isExpired = new Date(item.endDate) < today;
+                                                        const isCompleted = item.status === 'completed';
+                                                        const isIncomplete = item.status === 'incomplete';
+                                                        
+                                                        
                                                         return (
                                                             <div 
                                                                 key={item.id} 
-                                                                className={`flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ml-4 ${ isExpired ? 'opacity-50' : '' }`} 
-                                                                onClick={() => handleEditItem(item)}
+                                                                className={`border rounded-lg p-3 ml-4 item-row ${ isExpired ? 'opacity-50' : '' } ${
+                                                                    isCompleted ? 'bg-green-50 border-green-200' : 
+                                                                    isIncomplete ? 'bg-red-50 border-red-200' : 'bg-white'
+                                                                }`}
                                                             >
-                                                                <div className={`w-4 h-4 rounded ${item.color}`}></div>
-                                                                <div className="flex-1">
-                                                                    <div className="flex items-center space-x-2">
-                                                                        <span className="font-medium">{item.type}</span>
-                                                                        {item.detail && <span className="text-gray-600">- {item.detail}</span>}
+                                                                <div className="flex items-center space-x-3 item-content">
+                                                                    <div className={`w-4 h-4 rounded ${item.color}`}></div>
+                                                                    <div className="flex-1 item-info">
+                                                                        <div className="flex items-center space-x-2">
+                                                                            <span className={`font-medium item-type ${isCompleted ? 'line-through text-gray-500' : ''}`}>
+                                                                                {item.type}
+                                                                            </span>
+                                                                            {item.detail && <span className={`text-gray-600 ${isCompleted ? 'line-through' : ''}`}>- {item.detail}</span>}
+                                                                        </div>
+                                                                        <div className="text-sm text-gray-500 mt-1 item-dates">
+                                                                            {item.startDate.toLocaleDateString('zh-TW')} - {item.endDate.toLocaleDateString('zh-TW')}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                                <div className="text-sm text-gray-500">
-                                                                    {item.startDate.toLocaleDateString('zh-TW')} - {item.endDate.toLocaleDateString('zh-TW')}
-                                                                    {isExpired && <span className="ml-2 text-red-500">已過期</span>}
+                                                                    
+                                                                    {/* 狀態選擇和備註在右側 */}
+                                                                    <div className="flex items-center space-x-4 item-status">
+                                                                        <label className="flex items-center space-x-1 cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isCompleted}
+                                                                                onChange={(e) => {
+                                                                                    if (e.target.checked) {
+                                                                                        handleUpdateItemStatus(item.id, 'completed', item.notes || '');
+                                                                                    } else {
+                                                                                        handleUpdateItemStatus(item.id, '', item.notes || '');
+                                                                                    }
+                                                                                }}
+                                                                                className="w-4 h-4 text-green-600 rounded focus:ring-green-500 status-box"
+                                                                            />
+                                                                            <span className="text-sm text-green-600 font-medium">完成</span>
+                                                                        </label>
+                                                                        
+                                                                        <label className="flex items-center space-x-1 cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isIncomplete}
+                                                                                onChange={(e) => {
+                                                                                    if (e.target.checked) {
+                                                                                        handleUpdateItemStatus(item.id, 'incomplete', item.notes || '');
+                                                                                    } else {
+                                                                                        handleUpdateItemStatus(item.id, '', item.notes || '');
+                                                                                    }
+                                                                                }}
+                                                                                className="w-4 h-4 text-red-600 rounded focus:ring-red-500 status-box"
+                                                                            />
+                                                                            <span className="text-sm text-red-600 font-medium">未完成</span>
+                                                                        </label>
+                                                                        
+                                                                        <input
+                                                                            type="text"
+                                                                            value={item.notes || ''}
+                                                                            onChange={(e) => handleUpdateItemStatus(item.id, item.status || '', e.target.value)}
+                                                                            className="w-32 text-sm border-b border-gray-300 bg-transparent focus:outline-none focus:border-blue-500 px-2 py-1 notes-line"
+                                                                            placeholder="備註..."
+                                                                        />
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         );
@@ -1001,7 +1210,9 @@
                                                     type: itemTypes.length > 0 ? itemTypes[0].name : '', 
                                                     detail: '', 
                                                     startDate: '', 
-                                                    endDate: '' 
+                                                    endDate: '',
+                                                    status: '',
+                                                    notes: ''
                                                 }); 
                                             }} 
                                             className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 transition-colors"
