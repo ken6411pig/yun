@@ -292,6 +292,7 @@
                             { name: '規範', color: 'bg-orange-500' },
                             { name: '因應計畫', color: 'bg-indigo-500' },
                             { name: '行政', color: 'bg-gray-500' },
+                            { name: '跑照', color: 'bg-pink-500' },
                         ]);
                     }
                     
@@ -331,8 +332,23 @@
                     } catch (e) {
                         console.error('載入資料失敗:', e);
                     }
+                }else {
+                    // *** 新增的 else 區塊 ***
+                    // 如果是全新專案，清空項目並使用預設類型
+                    setItems([]);
+                    setItemTypes([
+                        { name: '重要節點', color: 'bg-red-500' },
+                        { name: '技師', color: 'bg-green-500' },
+                        { name: '圖說', color: 'bg-blue-500' },
+                        { name: '報告書', color: 'bg-yellow-500' },
+                        { name: '簡報', color: 'bg-purple-500' },
+                        { name: '預算', color: 'bg-teal-500' },
+                        { name: '規範', color: 'bg-orange-500' },
+                        { name: '因應計畫', color: 'bg-indigo-500' },
+                        { name: '行政', color: 'bg-gray-500' },
+                        { name: '跑照', color: 'bg-pink-500' },
+                ]);
                 }
-                
                 if (!allProjects.includes(projectName)) {
                     setAllProjects([...allProjects, projectName]);
                 }
@@ -782,6 +798,7 @@
                                                             { name: '規範', color: 'bg-orange-500' },
                                                             { name: '因應計畫', color: 'bg-indigo-500' },
                                                             { name: '行政', color: 'bg-gray-500' },
+                                                            { name: '跑照', color: 'bg-pink-500' },
                                                         ]);
                                                     }
                                                 }}
