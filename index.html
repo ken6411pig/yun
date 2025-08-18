@@ -233,7 +233,7 @@ color: #B22222 !important;
             }
 
             .is-printing .project-bar-text {
-                font-size: 12pt !important;
+                font-size: 9pt !important;
                 line-height: 1.2 !important;
                 color: white !important;
                 font-weight: 500 !important;
@@ -254,20 +254,20 @@ color: #B22222 !important;
             .is-printing .calendar-weeks-container {
                 display: flex;
                 flex-direction: column;
-                height: calc(100% - 50px);
+    height: calc(100vh - 6cm);
     width: 100%;
             }
             .is-printing .calendar-week-row {
                 flex: 1; 
                 display: flex;
                 flex-direction: column;
-min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
+min-height: calc((100vh - 5cm) / 6) !important; /* 平均分配6週的高度 */
             }
             .is-printing .calendar-week-row > div {
                 flex: 1; 
             }
             .is-printing .calendar-week-row {
-                min-height: 150px !important;
+                min-height: calc((100vh - 5cm) / 6) !important;
             }
 
             /* A3列印時的日期格子調整 */
@@ -1113,19 +1113,19 @@ min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
                                                     ? `${item.title}:${item.type}-${item.detail}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`
                                                     : `${item.title}:${item.type}${showUserInProgressBar ? `(${item.creator || '未知'})` : ''}`;
                                                 
-                                                const topPosition = isPrinting ? (35 + layerIndex * 24) : (45 + layerIndex * 32);
-                                                const height = isPrinting ? '22px' : '28px';
-                                                const padding = isPrinting ? 'px-2 py-1' : 'px-3 py-2';
+                                                const topPosition = isPrinting ? (33 + layerIndex * 16) : (43 + layerIndex * 20);
+                                                const height = isPrinting ? '14px' : '18px';
+                                                const padding = isPrinting ? 'px-1 py-0' : 'px-2 py-1';
                                                 
                                                 return (
                                                     <div
                                                         key={`${item.id}-${segmentIndex}`}
-                                                        className={`absolute ${item.color} text-white text-sm ${padding} rounded shadow-sm hover:shadow-md transition-all cursor-pointer pointer-events-auto ${ segment.isExpired ? 'opacity-40' : 'opacity-90 hover:opacity-100' }`}
+                                                        className={`absolute ${item.color} text-white text-xs ${padding} rounded shadow-sm hover:shadow-md transition-all cursor-pointer pointer-events-auto ${ segment.isExpired ? 'opacity-40' : 'opacity-90 hover:opacity-100' }`}
                                                         style={{ left: segment.left, width: segment.width, top: `${topPosition}px`, height: height, zIndex: 10 }}
                                                         title={`${displayText} ${segment.isExpired ? '- 已過期' : segment.isOngoing ? '- 進行中' : ''}`}
                                                         onClick={() => handleEditItem(item)}
                                                     >
-                                                        <div className="truncate leading-tight project-bar-text"> {displayText} </div>
+                                                        <div className="truncate leading-tight project-bar-text font-normal"> {displayText} </div>
                                                     </div>
                                                 );
                                             });
