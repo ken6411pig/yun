@@ -320,14 +320,14 @@ min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
             const [isPrinting, setIsPrinting] = useState(false);
             const [showUserInProgressBar, setShowUserInProgressBar] = useState(false);
             const [itemTypes, setItemTypes] = useState([
-                { name: '重要節點', color: 'bg-red-500' },
+                { name: '重要', color: 'bg-red-500' },
                 { name: '技師', color: 'bg-green-500' },
                 { name: '圖說', color: 'bg-blue-500' },
                 { name: '報告書', color: 'bg-yellow-500' },
                 { name: '簡報', color: 'bg-purple-500' },
                 { name: '預算', color: 'bg-teal-500' },
                 { name: '規範', color: 'bg-orange-500' },
-                { name: '因應計畫', color: 'bg-indigo-500' },
+                { name: '因應', color: 'bg-indigo-500' },
                 { name: '行政', color: 'bg-gray-500' },
                 { name: '跑照', color: 'bg-pink-500' },
             ]);
@@ -384,14 +384,14 @@ min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
                         setShowProjectSetup(true);
                         setItems([]);
                         setItemTypes([
-                            { name: '重要節點', color: 'bg-red-500' },
+                            { name: '重要', color: 'bg-red-500' },
                             { name: '技師', color: 'bg-green-500' },
                             { name: '圖說', color: 'bg-blue-500' },
                             { name: '報告書', color: 'bg-yellow-500' },
                             { name: '簡報', color: 'bg-purple-500' },
                             { name: '預算', color: 'bg-teal-500' },
                             { name: '規範', color: 'bg-orange-500' },
-                            { name: '因應計畫', color: 'bg-indigo-500' },
+                            { name: '因應', color: 'bg-indigo-500' },
                             { name: '行政', color: 'bg-gray-500' },
                             { name: '跑照', color: 'bg-pink-500' },
                         ]);
@@ -438,14 +438,14 @@ min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
                     // 如果是全新專案，清空項目並使用預設類型
                     setItems([]);
                     setItemTypes([
-                        { name: '重要節點', color: 'bg-red-500' },
+                        { name: '重要', color: 'bg-red-500' },
                         { name: '技師', color: 'bg-green-500' },
                         { name: '圖說', color: 'bg-blue-500' },
                         { name: '報告書', color: 'bg-yellow-500' },
                         { name: '簡報', color: 'bg-purple-500' },
                         { name: '預算', color: 'bg-teal-500' },
                         { name: '規範', color: 'bg-orange-500' },
-                        { name: '因應計畫', color: 'bg-indigo-500' },
+                        { name: '因應', color: 'bg-indigo-500' },
                         { name: '行政', color: 'bg-gray-500' },
                         { name: '跑照', color: 'bg-pink-500' },
                 ]);
@@ -890,14 +890,14 @@ min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
                                                     } else {
                                                         setItems([]);
                                                         setItemTypes([
-                                                            { name: '重要節點', color: 'bg-red-500' },
+                                                            { name: '重要', color: 'bg-red-500' },
                                                             { name: '技師', color: 'bg-green-500' },
                                                             { name: '圖說', color: 'bg-blue-500' },
                                                             { name: '報告書', color: 'bg-yellow-500' },
                                                             { name: '簡報', color: 'bg-purple-500' },
                                                             { name: '預算', color: 'bg-teal-500' },
                                                             { name: '規範', color: 'bg-orange-500' },
-                                                            { name: '因應計畫', color: 'bg-indigo-500' },
+                                                            { name: '因應', color: 'bg-indigo-500' },
                                                             { name: '行政', color: 'bg-gray-500' },
                                                             { name: '跑照', color: 'bg-pink-500' },
                                                         ]);
@@ -1149,9 +1149,11 @@ min-height: calc((100vh - 4cm) / 6) !important; /* 平均分配6週的高度 */
             <div className="memo-item">A2平面圖</div>
             <div className="memo-item">A3立面圖</div>
             <div className="memo-item">A4剖面圖</div>
-            <div className="memo-item">A5設備指標圖</div>
-            <div className="memo-item">A6櫃體圖</div>
+            <div className="memo-item">A5樓梯電梯圖</div>
+            <div className="memo-item">A6門窗圖</div>
             <div className="memo-item">A7細部圖</div>
+            <div className="memo-item">A8自訂擴充</div>
+            <div className="memo-item">A9自訂擴充</div>
             <div className="memo-item">S結構圖</div>
             <div className="memo-item">EPW機電圖</div>
             <div className="memo-item">F消防圖</div>
