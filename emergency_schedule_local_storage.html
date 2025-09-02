@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>急診科排班系統</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border: 1px solid #ddd;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin: 0 5px;
+            border-radius: 4px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        input[type="text"], select, input[type="file"] {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            margin: 0 5px;
+            border-radius: 4px;
+        }
+
+        .calendar-table {
+            border-collapse: collapse;
+            width: 100%;
+            border: 2px solid #000;
+            margin: 20px 0;
+        }
+
+        .calendar-table th, .calendar-table td {
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+            padding: 8px 4px;
+            font-size: 14px;
+        }
+
+        .calendar-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+            height: 30px;
+        }
+
+        .date-header {
+            background: #f8f9fa;
+            height: 25px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .date-header:hover {
+            background: #e6f3ff !important;
+        }
+
+        .shift-cell {
+            height: 40px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .shift-cell:hover {
+            background: #e6f3ff !important;
+        }
+
+        .holiday-date {
+            background: #ffeb3b !important;
+            color: #000;
+        }
+
+        .doctor-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 12px;
+        }
+
+        .doctor-menu {
+            position: absolute;
+            background: white;
+            border: 2px solid #333;
+            padding: 10px;
+            z-index: 1001;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .doctor-menu-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .doctor-menu-item:hover {
+            background: #e6f3ff;
+        }
+
+        .doctor-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .notes {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+
+        .statistics {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+            flex: 1;
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 400px;
+            border-radius: 8px;
+        }
+
+        .modal h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+            margin: 0;
+        }
+
+        .doctor-list {
+            border: 1px solid #ddd;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .doctor-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .doctor-item:last-child {
+            border-bottom: none;
+        }
+
+        .storage-section {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+
+        .storage-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .row-label {
+            writing-mode: vertical-lr;
+            text-orientation: upright;
+            font-weight: bold;
+            background: #f0f0f0;
+            width: 60px;
+            font-size: 12px;
+        }
+
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .file-input-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input-container input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .last-saved {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>國軍花蓮總醫院急診醫學科</h1>
+            <h2>排班系統</h2>
+        </div>
+
+        <div class="controls">
+            <div>
+                <button class="btn" onclick="previousMonth()">◀ 上月</button>
+                <span id="currentMonth"></span>
+                <button class="btn" onclick="nextMonth()">下月 ▶</button>
+            </div>
+            
+            <div>
+                <input type="text" id="doctorNameInput" placeholder="輸入醫師姓名">
+                <button class="btn btn-success" onclick="addDoctor()">新增醫師</button>
+                <button class="btn" onclick="showDoctorList()">醫師清單</button>
+            </div>
+        </div>
+
+        <div class="storage-section">
+            <h3>📁 資料管理</h3>
+            <p>資料會自動儲存到瀏覽器本地，您也可以手動備份或載入資料檔案</p>
+            <div class="storage-controls">
+                <button class="btn btn-success" onclick="downloadBackup()">💾 下載備份</button>
+                <div class="file-input-container">
+                    <button class="btn btn-warning">📁 載入備份</button>
+                    <input type="file" id="fileInput" accept=".json" onchange="loadBackup(event)">
+                </div>
+                <button class="btn btn-danger" onclick="clearAllData()">🗑️ 清空資料</button>
+            </div>
+            <div id="statusMessage"></div>
+            <div id="lastSaved" class="last-saved"></div>
+        </div>
+
+        <div class="statistics">
+            <div class="stat-item">
+                <span class="stat-number" id="totalShifts">0</span>
+                <span>總班數</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="weekdayShifts">0</span>
+                <span>平日班</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="holidayShifts">0</span>
+                <span>假日班</span>
+            </div>
+        </div>
+
+        <table class="calendar-table" id="calendar">
+        </table>
+
+        <div class="notes">
+            <h3>排班注意事項：</h3>
+            <p><strong>值勤時段：</strong> 白班 08:00-20:00；夜班 20:00-08:00</p>
+            <p>1. 班表按照期班排定順序</p>
+            <p>2. 排班須配合各醫師門診需求</p>
+            <p>3. 排定後門急診部主任可依各醫師門診時間實施微調</p>
+            <p><strong>注意：</strong>每週三醫療部會議完為科務會議</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn" onclick="exportToWord()">📄 匯出Word排班表</button>
+        </div>
+    </div>
+
+    <!-- 醫師清單模態視窗 -->
+    <div id="doctorListModal" class="modal">
+        <div class="modal-content">
+            <h3>醫師清單管理</h3>
+            <div class="doctor-list" id="doctorListContent"></div>
+            <button class="btn" onclick="closeDoctorListModal()">關閉</button>
+        </div>
+    </div>
+
+    <!-- 確認清空資料模態視窗 -->
+    <div id="confirmClearModal" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ 確認清空資料</h3>
+            <p>此操作將會刪除所有排班資料和醫師清單，此動作無法復原。</p>
+            <p>建議您在清空前先下載備份。</p>
+            <div class="modal-buttons">
+                <button class="btn btn-danger" onclick="confirmClearData()">確認清空</button>
+                <button class="btn" onclick="closeConfirmClearModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全域變數
+        const currentDate = new Date();
+        let currentYear = currentDate.getFullYear();
+        let currentMonth = currentDate.getMonth();
+        
+        let doctors = ['陳育新', '蘇頌暉', '龍明錦', '陳則瑀', '顏雋', '尤仲豪','巴重翰', '陳書瑋', '江宇斌', '陳彥圻', '莊奕翰', '張嘉慶', '王映翔'];
+        let schedule = {};
+        let manualHolidays = {};
+
+        // 初始化
+        function init() {
+            loadLocalData();
+            setWeekendsAsHolidays();
+            updateCalendar();
+            updateStatistics();
+            updateLastSavedTime();
+        }
+
+        // 本地資料儲存與載入
+        function saveLocalData() {
+            const data = {
+                schedule: schedule,
+                doctors: doctors,
+                manualHolidays: manualHolidays,
+                lastUpdate: new Date().toISOString(),
+                version: "1.0"
+            };
+            
+            try {
+                localStorage.setItem('emergency_schedule_data', JSON.stringify(data));
+                updateLastSavedTime();
+                return true;
+            } catch (error) {
+                showStatusMessage('本地儲存失敗: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        function loadLocalData() {
+            const savedData = localStorage.getItem('emergency_schedule_data');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    schedule = data.schedule || {};
+                    doctors = data.doctors || doctors;
+                    manualHolidays = data.manualHolidays || {};
+                    showStatusMessage('已載入本地儲存的資料', 'success');
+                } catch (error) {
+                    showStatusMessage('載入本地資料失敗: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // 下載備份檔案
+        function downloadBackup() {
+            const data = {
+                schedule: schedule,
+                doctors: doctors,
+                manualHolidays: manualHolidays,
+                exportDate: new Date().toISOString(),
+                version: "1.0"
+            };
+
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `急診科排班備份_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showStatusMessage('✅ 備份檔案已下載', 'success');
+        }
+
+        // 載入備份檔案
+        function loadBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (data.schedule && data.doctors) {
+                        schedule = data.schedule;
+                        doctors = data.doctors;
+                        manualHolidays = data.manualHolidays || {};
+                        
+                        saveLocalData();
+                        updateCalendar();
+                        updateStatistics();
+                        
+                        const backupDate = data.exportDate ? 
+                            new Date(data.exportDate).toLocaleString('zh-TW') : '未知';
+                        showStatusMessage(`✅ 備份資料載入成功 (備份日期: ${backupDate})`, 'success');
+                    } else {
+                        showStatusMessage('❌ 備份檔案格式不正確', 'error');
+                    }
+                } catch (error) {
+                    showStatusMessage('❌ 備份檔案讀取失敗: ' + error.message, 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showStatusMessage('❌ 檔案讀取失敗', 'error');
+            };
+            
+            reader.readAsText(file);
+            
+            // 重設檔案輸入
+            event.target.value = '';
+        }
+
+        // 清空所有資料
+        function clearAllData() {
+            document.getElementById('confirmClearModal').style.display = 'block';
+        }
+
+        function confirmClearData() {
+            schedule = {};
+            doctors = ['陳育新', '蘇頌暉', '龍明錦', '陳則瑀', '顏雋', '尤仲豪','巴重翰', '陳書瑋', '江宇斌', '陳彥圻', '莊奕翰', '張嘉慶', '王映翔'];
+            manualHolidays = {};
+            
+            localStorage.removeItem('emergency_schedule_data');
+            
+            setWeekendsAsHolidays();
+            updateCalendar();
+            updateStatistics();
+            updateLastSavedTime();
+            
+            closeConfirmClearModal();
+            showStatusMessage('🗑️ 所有資料已清空', 'info');
+        }
+
+        function closeConfirmClearModal() {
+            document.getElementById('confirmClearModal').style.display = 'none';
+        }
+
+        // 顯示狀態訊息
+        function showStatusMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            
+            // 自動清除訊息
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // 更新最後儲存時間
+        function updateLastSavedTime() {
+            const savedData = localStorage.getItem('emergency_schedule_data');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    if (data.lastUpdate) {
+                        const lastUpdate = new Date(data.lastUpdate).toLocaleString('zh-TW');
+                        document.getElementById('lastSaved').textContent = `最後儲存: ${lastUpdate}`;
+                    }
+                } catch (error) {
+                    document.getElementById('lastSaved').textContent = '';
+                }
+            } else {
+                document.getElementById('lastSaved').textContent = '';
+            }
+        }
+
+        // 排班相關功能
+        function isHoliday(dateKey) {
+            if (manualHolidays[dateKey]) {
+                return { type: 'holiday', name: '假日' };
+            }
+            return null;
+        }
+
+        function setWeekendsAsHolidays() {
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(currentYear, currentMonth, day);
+                const dayOfWeek = date.getDay();
+                
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    manualHolidays[dateKey] = true;
+                }
+            }
+        }
+
+        function toggleHoliday(dateKey) {
+            if (manualHolidays[dateKey]) {
+                delete manualHolidays[dateKey];
+            } else {
+                manualHolidays[dateKey] = true;
+            }
+            saveLocalData();
+            updateCalendar();
+            updateStatistics();
+        }
+
+        function showDoctorMenu(event, dateKey, shiftType) {
+            event.stopPropagation();
+            
+            const existingMenu = document.querySelector('.doctor-menu');
+            if (existingMenu) {
+                existingMenu.remove();
+            }
+            
+            const menu = document.createElement('div');
+            menu.className = 'doctor-menu';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            
+            const clearItem = document.createElement('div');
+            clearItem.className = 'doctor-menu-item';
+            clearItem.textContent = '清空';
+            clearItem.style.color = '#dc3545';
+            clearItem.style.fontWeight = 'bold';
+            clearItem.onclick = () => {
+                assignDoctorToShift(dateKey, shiftType, '');
+                menu.remove();
+            };
+            menu.appendChild(clearItem);
+            
+            const separator = document.createElement('div');
+            separator.style.borderBottom = '2px solid #333';
+            separator.style.margin = '5px 0';
+            menu.appendChild(separator);
+            
+            doctors.forEach(doctor => {
+                const item = document.createElement('div');
+                item.className = 'doctor-menu-item';
+                item.textContent = doctor;
+                item.onclick = () => {
+                    assignDoctorToShift(dateKey, shiftType, doctor);
+                    menu.remove();
+                };
+                menu.appendChild(item);
+            });
+            
+            document.body.appendChild(menu);
+            
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu() {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                });
+            }, 100);
+        }
+
+        function assignDoctorToShift(dateKey, shiftType, doctor) {
+            if (doctor === '') {
+                if (schedule[dateKey]) {
+                    delete schedule[dateKey][shiftType];
+                    if (Object.keys(schedule[dateKey]).length === 0) {
+                        delete schedule[dateKey];
+                    }
+                }
+            } else {
+                if (!schedule[dateKey]) {
+                    schedule[dateKey] = {};
+                }
+                schedule[dateKey][shiftType] = doctor;
+            }
+            
+            saveLocalData();
+            updateCalendar();
+            updateStatistics();
+        }
+
+        function updateCalendar() {
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            document.getElementById('currentMonth').textContent = `中華民國${currentYear-1911}年${monthNames[currentMonth]}值班表`;
+            
+            const calendar = document.getElementById('calendar');
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
+            
+            let html = '<tr><th></th>';
+            dayNames.forEach(day => {
+                html += `<th>${day}</th>`;
+            });
+            html += '</tr>';
+            
+            const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+            
+            let day = 1;
+            const weeks = Math.ceil((daysInMonth + adjustedFirstDay) / 7);
+            
+            for (let week = 0; week < weeks; week++) {
+                html += '<tr>';
+                html += '<td class="row-label" rowspan="3">值班醫師</td>';
+                
+                let dayForDate = day;
+                for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                    if ((week === 0 && dayOfWeek < adjustedFirstDay) || dayForDate > daysInMonth) {
+                        html += '<td class="date-header"></td>';
+                    } else {
+                        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayForDate).padStart(2, '0')}`;
+                        const holiday = isHoliday(dateKey);
+                        const holidayClass = holiday ? 'holiday-date' : '';
+                        
+                        html += `<td class="date-header ${holidayClass}" onclick="toggleHoliday('${dateKey}')">${dayForDate}</td>`;
+                        dayForDate++;
+                    }
+                }
+                html += '</tr>';
+                
+                html += '<tr>';
+                let dayForDay = day;
+                for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                    if ((week === 0 && dayOfWeek < adjustedFirstDay) || dayForDay > daysInMonth) {
+                        html += '<td class="shift-cell"></td>';
+                    } else {
+                        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayForDay).padStart(2, '0')}`;
+                        const daySchedule = schedule[dateKey] || {};
+                        const holiday = isHoliday(dateKey);
+                        const holidayClass = holiday ? 'holiday-date' : '';
+                        
+                        html += `
+                            <td class="shift-cell ${holidayClass}" onclick="showDoctorMenu(event, '${dateKey}', 'day')">
+                                <div class="doctor-name">${daySchedule.day || ''}</div>
+                            </td>
+                        `;
+                        dayForDay++;
+                    }
+                }
+                html += '</tr>';
+                
+                html += '<tr>';
+                let dayForNight = day;
+                for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                    if ((week === 0 && dayOfWeek < adjustedFirstDay) || dayForNight > daysInMonth) {
+                        html += '<td class="shift-cell"></td>';
+                    } else {
+                        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayForNight).padStart(2, '0')}`;
+                        const daySchedule = schedule[dateKey] || {};
+                        const holiday = isHoliday(dateKey);
+                        const holidayClass = holiday ? 'holiday-date' : '';
+                        
+                        html += `
+                            <td class="shift-cell ${holidayClass}" onclick="showDoctorMenu(event, '${dateKey}', 'night')">
+                                <div class="doctor-name">${daySchedule.night || ''}</div>
+                            </td>
+                        `;
+                        dayForNight++;
+                    }
+                }
+                html += '</tr>';
+                
+                day = dayForDate;
+            }
+            
+            calendar.innerHTML = html;
+        }
+
+        function previousMonth() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            setWeekendsAsHolidays();
+            updateCalendar();
+            updateStatistics();
+        }
+
+        function nextMonth() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            setWeekendsAsHolidays();
+            updateCalendar();
+            updateStatistics();
+        }
+
+        function addDoctor() {
+            const input = document.getElementById('doctorNameInput');
+            const name = input.value.trim();
+            if (name && !doctors.includes(name)) {
+                doctors.push(name);
+                input.value = '';
+                saveLocalData();
+                updateStatistics();
+                showStatusMessage(`✅ 已新增醫師: ${name}`, 'success');
+            }
+        }
+
+        function showDoctorList() {
+            const content = document.getElementById('doctorListContent');
+            content.innerHTML = '';
+            
+            doctors.forEach((doctor, index) => {
+                content.innerHTML += `
+                    <div class="doctor-item">
+                        <span>${doctor}</span>
+                        <button class="btn btn-danger" onclick="removeDoctor(${index})">移除</button>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('doctorListModal').style.display = 'block';
+        }
+
+        function removeDoctor(index) {
+            const doctorName = doctors[index];
+            doctors.splice(index, 1);
+            
+            Object.keys(schedule).forEach(dateKey => {
+                Object.keys(schedule[dateKey]).forEach(shiftType => {
+                    if (schedule[dateKey][shiftType] === doctorName) {
+                        delete schedule[dateKey][shiftType];
+                    }
+                });
+                if (Object.keys(schedule[dateKey]).length === 0) {
+                    delete schedule[dateKey];
+                }
+            });
+            
+            saveLocalData();
+            updateCalendar();
+            updateStatistics();
+            showDoctorList();
+            showStatusMessage(`🗑️ 已移除醫師: ${doctorName}`, 'info');
+        }
+
+        function closeDoctorListModal() {
+            document.getElementById('doctorListModal').style.display = 'none';
+        }
+
+        function updateStatistics() {
+            let totalShifts = 0;
+            let weekdayShifts = 0;
+            let holidayShifts = 0;
+            
+            Object.keys(schedule).forEach(dateKey => {
+                const daySchedule = schedule[dateKey];
+                const holiday = isHoliday(dateKey);
+                const isManualHoliday = holiday !== null;
+                
+                if (daySchedule.day) {
+                    totalShifts++;
+                    if (isManualHoliday) {
+                        holidayShifts++;
+                    } else {
+                        weekdayShifts++;
+                    }
+                }
+                if (daySchedule.night) {
+                    totalShifts++;
+                    if (isManualHoliday) {
+                        holidayShifts++;
+                    } else {
+                        weekdayShifts++;
+                    }
+                }
+            });
+            
+            document.getElementById('totalShifts').textContent = totalShifts;
+            document.getElementById('weekdayShifts').textContent = weekdayShifts;
+            document.getElementById('holidayShifts').textContent = holidayShifts;
+        }
+
+        // Word 匯出功能
+        function exportToWord() {
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
+            
+            let wordContent = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name=ProgId content=Word.Document>
+                    <style>
+                        @page WordSection1 {
+                            size: A4;
+                            margin: 0.5in 0.5in 0.5in 0.5in;
+                            mso-header-margin: .5in;
+                            mso-footer-margin: .5in;
+                            mso-paper-source: 0;
+                        }
+                        
+                        div.WordSection1 {
+                            page: WordSection1;
+                        }
+
+                        body { 
+                            font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; 
+                        }
+                        table { 
+                            border-collapse: collapse; 
+                            width: 100%; 
+                        }
+                        th, td { 
+                            border: 1px solid black; 
+                            text-align: center; 
+                            padding: 3px;
+                        }
+                        th { 
+                            background-color: #f0f0f0; 
+                            font-weight: bold; 
+                        }
+                        .header { 
+                            text-align: center; 
+                            font-weight: bold;
+                        }
+                        .header h2 {
+                            font-size: 18pt;
+                            margin: 0;
+                        }
+                        .header h3 {
+                            font-size: 14pt;
+                            margin: 0;
+                        }
+                        .notes { 
+                            font-size: 10pt;
+                            margin-top: 10px;
+                        }
+                        .holiday { 
+                            background-color: #ffeb3b; 
+                        }
+                        
+                        p {
+                            mso-para-margin-after:8.0pt;
+                            line-height:1.5;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="WordSection1">
+                        <div class="header">
+                            <h2>國軍花蓮總醫院急診醫學科</h2>
+                            <h3>中華民國${currentYear-1911}年${monthNames[currentMonth]}值班表(1.0)</h3>
+                        </div>
+                        
+                        <table>
+                            <tr><th style="width:60px;"></th>
+            `;
+            
+            dayNames.forEach(day => {
+                wordContent += `<th style="width:80px;">${day}</th>`;
+            });
+            wordContent += '</tr>';
+            
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+            
+            let day = 1;
+            const weeks = Math.ceil((daysInMonth + adjustedFirstDay) / 7);
+            
+            for (let week = 0; week < weeks; week++) {
+                wordContent += '<tr><td rowspan="3" style="writing-mode: vertical-lr; text-orientation: upright; font-weight: bold;">值班醫師</td>';
+                let dayCounter = day;
+                for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                    if ((week === 0 && dayOfWeek < adjustedFirstDay) || dayCounter > daysInMonth) {
+                        wordContent += '<td></td>';
+                    } else {
+                        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayCounter).padStart(2, '0')}`;
+                        const isWeekend = new Date(currentYear, currentMonth, dayCounter).getDay() % 6 === 0;
+                        const holidayClass = isHoliday(dateKey) || isWeekend ? 'holiday' : '';
+                        wordContent += `<td class="${holidayClass}" style="font-weight: bold;">${dayCounter}</td>`;
+                        dayCounter++;
+                    }
+                }
+                wordContent += '</tr>';
+                
+                wordContent += '<tr>';
+                dayCounter = day;
+                for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                    if ((week === 0 && dayOfWeek < adjustedFirstDay) || dayCounter > daysInMonth) {
+                        wordContent += '<td></td>';
+                    } else {
+                        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayCounter).padStart(2, '0')}`;
+                        const dayDoctor = schedule[dateKey] && schedule[dateKey].day ? schedule[dateKey].day : '';
+                        const isWeekend = new Date(currentYear, currentMonth, dayCounter).getDay() % 6 === 0;
+                        const holidayClass = isHoliday(dateKey) || isWeekend ? 'holiday' : '';
+                        wordContent += `<td class="${holidayClass}">${dayDoctor}</td>`;
+                        dayCounter++;
+                    }
+                }
+                wordContent += '</tr>';
+                
+                wordContent += '<tr>';
+                dayCounter = day;
+                for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                    if ((week === 0 && dayOfWeek < adjustedFirstDay) || dayCounter > daysInMonth) {
+                        wordContent += '<td></td>';
+                    } else {
+                        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayCounter).padStart(2, '0')}`;
+                        const nightDoctor = schedule[dateKey] && schedule[dateKey].night ? schedule[dateKey].night : '';
+                        const isWeekend = new Date(currentYear, currentMonth, dayCounter).getDay() % 6 === 0;
+                        const holidayClass = isHoliday(dateKey) || isWeekend ? 'holiday' : '';
+                        wordContent += `<td class="${holidayClass}">${nightDoctor}</td>`;
+                        dayCounter++;
+                    }
+                }
+                wordContent += '</tr>';
+                day = dayCounter;
+            }
+            
+            let totalShifts = 0;
+            Object.values(schedule).forEach(daySchedule => {
+                if (daySchedule.day) totalShifts++;
+                if (daySchedule.night) totalShifts++;
+            });
+            
+            wordContent += `
+                        </table>
+                        <div class="notes">
+                            <p><strong>注意：</strong>每週三醫療部會議完為科務會議。(值勤時段為白班08:00-20:00；夜班20:00-08:00)</p>
+                            <p><strong>排班注意事項：</strong>(1)班表按照期班排定順序(2) 排班須配合各醫師門診需求(3) 排定後門急診部主任可依各醫師門診時間實施微調 共${totalShifts}班</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            const blob = new Blob([wordContent], { type: 'application/vnd.ms-word' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `急診科排班表_${currentYear-1911}年${monthNames[currentMonth]}.doc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showStatusMessage('📄 Word 排班表已下載', 'success');
+        }
+
+        // 事件監聽器
+        window.onclick = function(event) {
+            const modals = ['doctorListModal', 'confirmClearModal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        document.getElementById('doctorNameInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                addDoctor();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            init();
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modals = ['doctorListModal', 'confirmClearModal'];
+                modals.forEach(modalId => {
+                    document.getElementById(modalId).style.display = 'none';
+                });
+            }
+        });
+
+        // 自動儲存功能
+        window.addEventListener('beforeunload', function() {
+            saveLocalData();
+        });
+
+        // 定期自動儲存 (每30秒)
+        setInterval(function() {
+            if (Object.keys(schedule).length > 0 || doctors.length > 0) {
+                saveLocalData();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
+            
